@@ -1,0 +1,69 @@
+import os
+import os.path as osp
+import re
+
+import torch
+from torch_geometric.data import Data, Dataset
+
+from data_parsing import process_file
+
+
+class MinCostDataset(Dataset):
+    def __init__(self, root, transform=None, pre_transform=None, pre_filter=None):
+        super().__init__(root, transform, pre_transform, pre_filter)
+
+    @property
+    def raw_file_names(self):
+        """If these files are found in the raw directory, download is skipped"""
+        return []
+
+    @property
+    def processed_file_names(self):
+        """If these files are found in the processed directory, processing is skipped"""
+        processed_files = []
+        path = self.processed_dir
+        for file in os.listdir(path):
+            file_path = os.path.join(path, file)
+            if not os.path.isdir(file_path) and not file == "pre_filter.pt" and not file == "pre_transform.pt":
+                processed_files.append(file)
+
+        return processed_files
+
+    def download(self):
+        pass
+
+    def process(self):
+        # Start by getting the last file id to avoid overwriting (since we expect
+        # filenames to be formatted as "data_{id}.pt")
+        idx = 0
+        for file in os.listdir(self.processed_dir):
+            prefix_string = "data_"
+            if file.startswith(prefix_string):
+                file_id = int(re.findall(r'\d+', file)[0])
+                idx = max(idx, file_id)
+        idx += 1
+
+        path = self.raw_dir
+        for file in os.listdir(path):
+            print(file)
+            file_path = os.path.join(path, file)
+            if os.path.isdir(file_path):
+                continue
+            # Read data from `raw_path`.
+            output = process_file(file_path, 'nx')
+            if output["converged"]:
+                x = output["x"].type(torch.FloatTensor)
+                edge_index = output["edge_index"]
+                edge_attr = output["edge_attr"].type(torch.FloatTensor)
+                y = output["y"]
+                data = Data(x = x, edge_index = edge_index, edge_attr = edge_attr, y = y, filename = file_path)
+
+                torch.save(data, osp.join(self.processed_dir, f'data_{idx}.pt'))
+                idx += 1
+
+    def len(self):
+        return len(self.processed_file_names)
+
+    def get(self, idx):
+        data = torch.load(osp.join(self.processed_dir, f'data_{idx}.pt'))
+        return data
