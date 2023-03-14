@@ -4,6 +4,7 @@ import torch
 import matplotlib.pyplot as plt
 from typing import Optional
 
+
 def parse(filename):
     """
     Parses a network file following the DIMACS problem specification
@@ -57,6 +58,7 @@ def parse(filename):
     file.close()
     return nodes, edges
 
+
 def build_network(nodes, edges):
     capacities, costs = zip(*edges.values())
     return Network(
@@ -67,25 +69,32 @@ def build_network(nodes, edges):
         list(nodes.values())
     )
 
+
 def build_networkx(nodes, edges):
     G = nx.DiGraph()
     for (n, s) in nodes.items():
-        G.add_node(n, demand=-s)
+        G.add_node(n, demand = -s)
 
     for (e, (u, c)) in edges.items():
-        G.add_edge(e[0], e[1], weight=c, capacity=u)
+        G.add_edge(e[0], e[1], weight = c, capacity = u)
 
     return G
+
 
 def build_pyg(nodes, edges, opt):
     if (len(edges.keys()) <= 1e6) and (opt is not None):
         index = {node: index for node, index in zip(nodes, range(len(nodes)))}
         x = torch.tensor([supply for supply in nodes.values()]).reshape((-1, 1))
-        edge_index = torch.reshape(torch.tensor([[index[e[0]], index[e[1]]] for e in edges]), (2, -1))
-        edge_attr = torch.tensor([list(attributes) for attributes in edges.values()])
-        y = torch.tensor(opt).reshape(1,1)
+        edge_index = []
+        edge_attr = []
+        for e, attr in edges.items():
+            edge_index.append([index[e[0]], index[e[1]]])
+            edge_attr.append(list(attr))
+        edge_index = torch.tensor(edge_index).T
+        edge_attr = torch.tensor(edge_attr)
+        y = torch.tensor(opt).reshape(1, 1)
         return {"converged": True, "x": x, "edge_index": edge_index, "edge_attr": edge_attr, "y": y}
-    
+
     return {"converged": False}
 
 
@@ -93,14 +102,14 @@ def min_cost_flow(nodes, edges, flow_alg, debug):
     if flow_alg == 'nx':
         G = build_networkx(nodes, edges)
         if debug:
-          nx.draw(G, pos=nx.circular_layout(G), with_labels=True)
-          plt.show()
-          print(G.nodes(data=True))
-          print(G.edges(data=True))
+            nx.draw(G, pos = nx.circular_layout(G), with_labels = True)
+            plt.show()
+            print(G.nodes(data = True))
+            print(G.edges(data = True))
         opt = nx.min_cost_flow_cost(G)
     if flow_alg == 'cbn':
         N = build_network(nodes, edges)
-        _, _, _, opt = successive_shortest_paths(N, iter_limit=150)
+        _, _, _, opt = successive_shortest_paths(N, iter_limit = 150)
     return opt
 
 
@@ -112,13 +121,11 @@ def process_file(filename, flow_alg, debug: Optional[bool] = False):
     else:
         return {"converged": False}
 
-
 # def pyg_to_networkx(edge_index, edge_attr):
 #     G = nx.DiGraph()
 #     nodes = list(set(edge_index[:, 0]).union(set(edge_index[:, 1])))
 #     for node in nodes:
 #         G.add_node(node)
-    
-#     for i in range(edge_index.size(0)):
-#       G.add_edge(edge_index[i, 0], edge_index[i, 1], weight=edge_attr[i, 0], capacity=[i, 1]) 
 
+#     for i in range(edge_index.size(0)):
+#       G.add_edge(edge_index[i, 0], edge_index[i, 1], weight=edge_attr[i, 0], capacity=[i, 1])
