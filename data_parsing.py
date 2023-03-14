@@ -3,6 +3,7 @@ import networkx as nx
 import torch
 import matplotlib.pyplot as plt
 from typing import Optional
+from collections import OrderedDict
 
 def parse(filename):
     """
@@ -55,6 +56,7 @@ def parse(filename):
                 else:
                     edges[(node1, node2)] = (capacity, cost)
     file.close()
+    nodes = OrderedDict(sorted(nodes.items(), key=lambda t: t[0]))
     return nodes, edges
 
 def build_network(nodes, edges):

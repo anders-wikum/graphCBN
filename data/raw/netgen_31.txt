@@ -1,0 +1,98 @@
+c PyNETGEN v1.0.0
+c $ pip install pynetgen
+c
+c  NETGEN flow network generation algorithm
+c  Problem input parameters
+c  -------------------------------------
+c   Random seed:          31
+c   Number of nodes:      20
+c   Source nodes:         3
+c   Sink nodes:           3
+c   Number of arcs:       66
+c   Minimum arc cost:     1
+c   Maximum arc cost:     10
+c   Total supply:         100
+c   Transshipment -
+c     Sources:            0
+c     Sinks:              0
+c   Skeleton arcs -
+c     With max cost:      0
+c     Capacitated:        100
+c   Minimum arc capacity: 1
+c   Maximum arc capacity: 50
+c
+c  *** Minimum cost flow ***
+c
+p min 20 66
+n 1 44
+n 2 22
+n 3 34
+n 18 -65
+n 19 -21
+n 20 -14
+a 1 7 0 44 9
+a 1 9 0 23 10
+a 1 11 0 2 6
+a 1 17 0 7 1
+a 1 16 0 39 2
+a 1 10 0 8 5
+a 6 18 0 44 2
+a 6 19 0 44 2
+a 6 20 0 6 10
+a 6 12 0 10 8
+a 6 17 0 41 10
+a 6 4 0 41 4
+a 7 17 0 44 6
+a 7 16 0 22 10
+a 7 10 0 36 8
+a 7 9 0 33 6
+a 10 6 0 44 10
+a 10 4 0 10 10
+a 10 16 0 13 10
+a 10 20 0 47 7
+a 10 15 0 15 8
+a 10 12 0 17 2
+a 14 10 0 44 6
+a 14 4 0 2 10
+a 14 16 0 5 6
+a 14 7 0 41 5
+a 17 14 0 44 5
+a 17 13 0 37 7
+a 17 12 0 7 2
+a 17 4 0 5 8
+a 2 15 0 22 9
+a 2 19 0 34 1
+a 2 4 0 10 4
+a 4 18 0 22 2
+a 4 15 0 16 10
+a 4 20 0 18 4
+a 9 19 0 22 5
+a 9 13 0 22 4
+a 9 14 0 47 10
+a 9 17 0 38 8
+a 9 18 0 14 1
+a 9 20 0 19 9
+a 13 4 0 22 9
+a 13 6 0 8 1
+a 13 19 0 26 7
+a 15 9 0 22 3
+a 15 8 0 25 5
+a 15 13 0 42 3
+a 15 20 0 50 6
+a 3 8 0 34 1
+a 3 13 0 29 8
+a 3 10 0 6 7
+a 3 14 0 10 3
+a 5 12 0 34 7
+a 5 4 0 29 4
+a 8 16 0 34 3
+a 8 18 0 34 8
+a 8 4 0 40 5
+a 8 15 0 40 8
+a 11 20 0 34 1
+a 11 6 0 5 2
+a 11 13 0 29 7
+a 12 11 0 34 9
+a 12 17 0 41 4
+a 16 5 0 34 2
+a 16 9 0 25 2
