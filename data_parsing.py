@@ -52,6 +52,7 @@ def parse(filename):
                     old_capacity, old_cost = edges[(node1, node2)]
                     new_cost = old_cost * old_capacity + cost * capacity
                     new_cost /= (old_capacity + capacity)
+                    new_cost = int(new_cost)
                     edges[(node1, node2)] = (old_capacity + capacity, new_cost)
                 else:
                     edges[(node1, node2)] = (capacity, cost)
@@ -109,7 +110,7 @@ def min_cost_flow(nodes, edges, flow_alg, debug):
         opt = nx.min_cost_flow_cost(G)
     if flow_alg == 'cbn':
         N = build_network(nodes, edges)
-        _, _, _, opt = successive_shortest_paths(N, iter_limit = 150)
+        _, _, _, opt = successive_shortest_paths(N, iter_limit = 100)
     return opt
 
 
