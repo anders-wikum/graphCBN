@@ -36,12 +36,15 @@ class MinCostDataset(Dataset):
         # Start by getting the last file id to avoid overwriting (since we expect
         # filenames to be formatted as "data_{id}.pt")
         idx = 0
+        found_file = False
         for file in os.listdir(self.processed_dir):
             prefix_string = "data_"
             if file.startswith(prefix_string):
+                found_file = True
                 file_id = int(re.findall(r'\d+', file)[0])
                 idx = max(idx, file_id)
-        idx += 1
+        if found_file:
+            idx += 1
 
         path = self.raw_dir
         for file in os.listdir(path):
@@ -50,13 +53,13 @@ class MinCostDataset(Dataset):
             if os.path.isdir(file_path):
                 continue
             # Read data from `raw_path`.
-            output = process_file(file_path, 'nx')
+            output = process_file(file_path, 'cbn')
             if output["converged"]:
                 x = output["x"].type(torch.FloatTensor)
                 edge_index = output["edge_index"]
                 edge_attr = output["edge_attr"].type(torch.FloatTensor)
                 y = output["y"]
-                data = Data(x = x, edge_index = edge_index, edge_attr = edge_attr, y = y, filename = file_path)
+                data = Data(x = x, edge_index = edge_index, edge_attr = edge_attr, y = y, filename = file)
 
                 torch.save(data, osp.join(self.processed_dir, f'data_{idx}.pt'))
                 idx += 1
