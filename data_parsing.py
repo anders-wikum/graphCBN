@@ -59,6 +59,21 @@ def parse(filename):
                     edges[(node1, node2)] = (capacity, cost)
     file.close()
     nodes = OrderedDict(sorted(nodes.items(), key=lambda t: t[0]))
+
+    supply = 0
+    for node in nodes:
+        excess = nodes[node]
+        if excess > 0:
+            edges[(-1, node)] = (excess, 0)
+            supply += excess
+        elif excess < 0:
+            edges[(node, -2)] = (-excess, 0)
+
+        nodes[node] = 0
+
+    nodes[-1] = supply
+    nodes[-2] = -supply
+    
     return nodes, edges
 
 

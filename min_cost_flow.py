@@ -18,35 +18,7 @@ class Network:
     ) -> None:
         # -1: meta source
         # -2: meta sink
-        self.V = [*nodes, -1, -2]
-
-        # Update input for meta nodes
-        source_indices = [i for i in range(len(nodes)) if supplies[i] > 0]
-        sink_indices = [i for i in range(len(nodes)) if supplies[i] < 0]
-
-        source_connections = [(-1, nodes[i]) for i in source_indices]
-        sink_connections = [(nodes[i], -2) for i in sink_indices]
-
-        edges = [
-            *edges,
-            *source_connections,
-            *sink_connections,
-        ]
-
-        capacities = [
-            *capacities,
-            *[supplies[i] for i in source_indices],
-            *[-supplies[i] for i in sink_indices]
-        ]
-
-        costs = [
-            *costs,
-            *[0 for _, i in source_connections],
-            *[0 for _, i in sink_connections]
-        ]
-
-        total_supply = sum(np.abs(supplies)) // 2
-        supplies = [*np.zeros(len(supplies)), total_supply, -total_supply]
+        self.V = nodes
         self.E = [(*edges[i - 1], i) for i in range(1, len(edges) + 1)]
         self.u = dict(zip(self.E, capacities))
         self.c = dict(zip(self.E, costs))
@@ -359,6 +331,7 @@ def compute_feasible_flow(
         # Admissible edges
         adj = [e for (e, u) in u_f_prime.items() if u > 0]
         P = BFS(S_f, T_f, adj)
+        #print(P)
         if P is None:
             break
         augment_flow_along_path(P, f, u_f_prime, e_f)
@@ -416,11 +389,13 @@ def successive_shortest_paths(
         S_f, T_f, e_f = excess_nodes(N, f)
 
         iters += 1
+        print(f"Iteration: {iters}")
         if iters == iter_limit:
             if 'iter_limit' in kwargs:
                 return False, f, p, np.array([-1])
             else:
                 return f, p, np.array([-1])
+        
 
     assert len({e: c for (e, c) in c_p.items() if u_f[e] > 0 and c < 0}) == 0
 

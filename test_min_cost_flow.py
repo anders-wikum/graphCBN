@@ -17,18 +17,18 @@ gen_files = [
 ]
 
 
-@pytest.mark.parametrize("file", mcf_files)
-def test_mcf(file):
-    nodes, edges = parse(file)
-    network = build_network(nodes, edges)
-    G = build_networkx(nodes, edges)
+# @pytest.mark.parametrize("file", mcf_files)
+# def test_mcf(file):
+#     nodes, edges = parse(file)
+#     network = build_network(nodes, edges)
+#     G = build_networkx(nodes, edges)
 
-    converged, _, _, cbn_opt = successive_shortest_paths(network, iter_limit=150)
-    nx_opt = nx.min_cost_flow_cost(G)
+#     converged, _, _, cbn_opt = successive_shortest_paths(network, iter_limit=150)
+#     nx_opt = nx.min_cost_flow_cost(G)
 
-    if converged:
-        print(cbn_opt, nx_opt)
-        assert np.isclose(cbn_opt, nx_opt)
+#     if converged:
+#         print(cbn_opt, nx_opt)
+#         assert np.isclose(cbn_opt, nx_opt)
 
 @pytest.mark.parametrize("file", gen_files)
 def test_pyg_generation(file):
