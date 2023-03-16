@@ -53,7 +53,7 @@ class MinCostDataset(Dataset):
             if os.path.isdir(file_path):
                 continue
             # Read data from `raw_path`.
-            output = process_file(file_path, 'nx')
+            output = process_file(file_path, 'cbn')
             if output["converged"]:
                 x = output["x"].type(torch.FloatTensor)
                 edge_index = output["edge_index"]

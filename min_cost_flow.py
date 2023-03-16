@@ -137,9 +137,15 @@ def reduced_cost(
     for e in u_f.keys():
         (u, v, _) = e
         if e in N.c:
-            reduced_costs[e] = int(N.c[e] + p[u] - p[v])
+            rc = N.c[e] + p[u] - p[v]
         else:
-            reduced_costs[e] = int(-N.c[rev(e)] + p[u] - p[v])
+            rc = -N.c[rev(e)] + p[u] - p[v]
+
+        if round(rc, 4) == 0:
+            reduced_costs[e] = 0
+        else:
+            reduced_costs[e] = rc
+
     return reduced_costs
 
 
@@ -253,6 +259,7 @@ def saturate_neg_cost_admissible(
         if c_p[e] < 0 and u > 0
     ]
     print(f"Number of negative cost admissible edges: {len(neg_cost_admissible)}")
+    #print({e: c_p[e] for e in neg_cost_admissible})
 
     saturate_edges(N, f, u_f, neg_cost_admissible)
 
@@ -279,7 +286,6 @@ def augment_flow_along_path(
 
     min_capacity = min(u_f[e] for e in P)
     delta = min(e_f[s], -e_f[t], min_capacity)
-
     for e in P:
         if e in f:
             f[e] += delta
@@ -378,6 +384,7 @@ def successive_shortest_paths(
     # Compute reduced costs w.r.t potentials p
     c_p = reduced_cost(N, u_f, p)
     S_f, T_f, e_f = excess_nodes(N, f)
+    print(np.sum(np.abs(np.array(list(e_f.values())))))
 
     while len(S_f) > 0:
         # Admissible edges

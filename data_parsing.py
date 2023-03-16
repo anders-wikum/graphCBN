@@ -4,6 +4,7 @@ import torch
 import matplotlib.pyplot as plt
 from typing import Optional
 from collections import OrderedDict
+import numpy as np
 
 
 def parse(filename):
@@ -98,8 +99,26 @@ def build_networkx(nodes, edges):
 
     return G
 
+def _build_pyg(nodes, edges, opt, p):
+
+    if (len(edges.keys()) <= 1e6):
+        index = {node: index for node, index in zip(nodes, range(len(nodes)))}
+        x = torch.tensor([supply for supply in nodes.values()]).reshape((-1, 1))
+        edge_index = []
+        edge_attr = []
+        y = np.array([[opt for _ in range(len(p))], list(p.values())])
+        for e, attr in edges.items():
+            edge_index.append([index[e[0]], index[e[1]]])
+            edge_attr.append(list(attr))
+        edge_index = torch.tensor(edge_index).T
+        edge_attr = torch.tensor(edge_attr)
+        y = torch.tensor(y).T
+        return {"converged": True, "x": x, "edge_index": edge_index, "edge_attr": edge_attr, "y": y}
+
+    return {"converged": False}
 
 def build_pyg(nodes, edges, opt):
+
     if (len(edges.keys()) <= 1e6) and (opt is not None):
         index = {node: index for node, index in zip(nodes, range(len(nodes)))}
         x = torch.tensor([supply for supply in nodes.values()]).reshape((-1, 1))
@@ -127,15 +146,15 @@ def min_cost_flow(nodes, edges, flow_alg, debug):
         opt = nx.min_cost_flow_cost(G)
     if flow_alg == 'cbn':
         N = build_network(nodes, edges)
-        _, _, _, opt = successive_shortest_paths(N, iter_limit = 100)
-    return opt
+        _, _, p, opt = successive_shortest_paths(N, iter_limit = 100)
+    return opt, p
 
 
 def process_file(filename, flow_alg, debug: Optional[bool] = False):
     nodes, edges = parse(filename)
     if len(edges.keys()) <= 1e6:
-        opt = min_cost_flow(nodes, edges, flow_alg, debug)
-        return build_pyg(nodes, edges, opt)
+        opt, p = min_cost_flow(nodes, edges, flow_alg, debug)
+        return _build_pyg(nodes, edges, opt, p)
     else:
         return {"converged": False}
 
