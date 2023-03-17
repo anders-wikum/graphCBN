@@ -59,7 +59,7 @@ def parse(filename):
                 else:
                     edges[(node1, node2)] = (capacity, cost)
     file.close()
-    nodes = OrderedDict(sorted(nodes.items(), key=lambda t: t[0]))
+    nodes = OrderedDict(sorted(nodes.items(), key = lambda t: t[0]))
 
     supply = 0
     for node in nodes:
@@ -74,7 +74,7 @@ def parse(filename):
 
     nodes[-1] = supply
     nodes[-2] = -supply
-    
+
     return nodes, edges
 
 
@@ -99,40 +99,48 @@ def build_networkx(nodes, edges):
 
     return G
 
-def _build_pyg(nodes, edges, opt, p):
 
-    if (len(edges.keys()) <= 1e6):
+def _build_pyg(nodes, edges, opt, p, converged, c_p):
+    if len(edges.keys()) <= 1e6 and converged:
         index = {node: index for node, index in zip(nodes, range(len(nodes)))}
-        x = torch.tensor([supply for supply in nodes.values()]).reshape((-1, 1))
+        x = torch.tensor([supply for supply in nodes.values()]).reshape((-1, 1)).type(torch.FloatTensor)
         edge_index = []
         edge_attr = []
+        reduced_cost = []
         y = np.array([[opt for _ in range(len(p))], list(p.values())])
         for e, attr in edges.items():
             edge_index.append([index[e[0]], index[e[1]]])
             edge_attr.append(list(attr))
+            reduced_cost.append(c_p[e])
         edge_index = torch.tensor(edge_index).T
-        edge_attr = torch.tensor(edge_attr)
+        edge_attr = torch.tensor(edge_attr).type(torch.FloatTensor)
+        reduced_cost = torch.tensor(reduced_cost)
         y = torch.tensor(y).T
-        return {"converged": True, "x": x, "edge_index": edge_index, "edge_attr": edge_attr, "y": y}
+        return {"converged": converged, "x": x, "edge_index": edge_index, "edge_attr": edge_attr, "y": y,
+                "reduced_cost": reduced_cost}
 
     return {"converged": False}
 
-def build_pyg(nodes, edges, opt):
 
-    if (len(edges.keys()) <= 1e6) and (opt is not None):
-        index = {node: index for node, index in zip(nodes, range(len(nodes)))}
-        x = torch.tensor([supply for supply in nodes.values()]).reshape((-1, 1))
-        edge_index = []
-        edge_attr = []
-        for e, attr in edges.items():
-            edge_index.append([index[e[0]], index[e[1]]])
-            edge_attr.append(list(attr))
-        edge_index = torch.tensor(edge_index).T
-        edge_attr = torch.tensor(edge_attr)
-        y = torch.tensor(opt).reshape(1, 1)
-        return {"converged": True, "x": x, "edge_index": edge_index, "edge_attr": edge_attr, "y": y}
-
-    return {"converged": False}
+# def build_pyg(nodes, edges, opt, converged, c_p):
+#     if (len(edges.keys()) <= 1e6) and (opt is not None) and converged:
+#         index = {node: index for node, index in zip(nodes, range(len(nodes)))}
+#         x = torch.tensor([supply for supply in nodes.values()]).reshape((-1, 1))
+#         edge_index = []
+#         edge_attr = []
+#         reduced_cost = []
+#         for e, attr in edges.items():
+#             edge_index.append([index[e[0]], index[e[1]]])
+#             edge_attr.append(list(attr))
+#             reduced_cost.append(c_p[e])
+#         edge_index = torch.tensor(edge_index).T
+#         edge_attr = torch.tensor(edge_attr)
+#         reduced_cost = torch.tensor(reduced_cost)
+#         y = torch.tensor(opt).reshape(1, 1)
+#         return {"converged":    True, "x": x, "edge_index": edge_index, "edge_attr": edge_attr, "y": y,
+#                 "reduced_cost": reduced_cost}
+#
+#     return {"converged": False}
 
 
 def min_cost_flow(nodes, edges, flow_alg, debug):
@@ -146,15 +154,15 @@ def min_cost_flow(nodes, edges, flow_alg, debug):
         opt = nx.min_cost_flow_cost(G)
     if flow_alg == 'cbn':
         N = build_network(nodes, edges)
-        _, _, p, opt = successive_shortest_paths(N, iter_limit = 100)
-    return opt, p
+        converged, c_p, _, p, opt = successive_shortest_paths(N, iter_limit = 100)
+    return converged, c_p, opt, p
 
 
 def process_file(filename, flow_alg, debug: Optional[bool] = False):
     nodes, edges = parse(filename)
     if len(edges.keys()) <= 1e6:
-        opt, p = min_cost_flow(nodes, edges, flow_alg, debug)
-        return _build_pyg(nodes, edges, opt, p)
+        converged, c_p, opt, p = min_cost_flow(nodes, edges, flow_alg, debug)
+        return _build_pyg(nodes, edges, opt, p, converged, c_p)
     else:
         return {"converged": False}
 

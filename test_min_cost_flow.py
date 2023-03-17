@@ -1,4 +1,4 @@
-from data_parsing import parse, process_file, build_network, build_networkx, build_pyg
+from data_parsing import parse, process_file, build_network, build_networkx
 from min_cost_flow import successive_shortest_paths
 import networkx as nx
 import numpy as np

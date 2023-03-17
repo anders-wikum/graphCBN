@@ -9,7 +9,7 @@ from data_parsing import process_file
 
 
 class MinCostDataset(Dataset):
-    def __init__(self, root, transform=None, pre_transform=None, pre_filter=None):
+    def __init__(self, root, transform = None, pre_transform = None, pre_filter = None):
         super().__init__(root, transform, pre_transform, pre_filter)
 
     @property
@@ -55,11 +55,19 @@ class MinCostDataset(Dataset):
             # Read data from `raw_path`.
             output = process_file(file_path, 'cbn')
             if output["converged"]:
-                x = output["x"].type(torch.FloatTensor)
+                x = output["x"]
                 edge_index = output["edge_index"]
-                edge_attr = output["edge_attr"].type(torch.FloatTensor)
+                edge_attr = output["edge_attr"]
                 y = output["y"]
-                data = Data(x = x, edge_index = edge_index, edge_attr = edge_attr, y = y, filename = file)
+                # Post-process reduced costs, negative -> -1, [1,0,0], 0 -> [0,1,0], 1 -> [0,0,1]
+                reduced_cost = output["reduced_cost"]
+                one_hot_reduced_cost = torch.zeros((reduced_cost.shape[0], 3))
+                one_hot_reduced_cost[reduced_cost < 0] = torch.tensor([1, 0, 0]).type(torch.FloatTensor)
+                one_hot_reduced_cost[reduced_cost == 0] = torch.tensor([0, 1, 0]).type(torch.FloatTensor)
+                one_hot_reduced_cost[reduced_cost > 0] = torch.tensor([0, 0, 1]).type(torch.FloatTensor)
+
+                data = Data(x = x, edge_index = edge_index, edge_attr = edge_attr, y = y, reduced_cost = one_hot_reduced_cost,
+                            filename = file)
 
                 torch.save(data, osp.join(self.processed_dir, f'data_{idx}.pt'))
                 idx += 1
