@@ -141,7 +141,7 @@ def reduced_cost(
         else:
             rc = -N.c[rev(e)] + p[u] - p[v]
 
-        if round(rc, 4) == 0:
+        if abs(rc) < 0.5:
             reduced_costs[e] = 0
         else:
             reduced_costs[e] = rc
