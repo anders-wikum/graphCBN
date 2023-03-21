@@ -23,6 +23,7 @@ def compute_dataset_metrics(dataset, model, raw_dir):
     speedups = []
     excess_diffs = []
     for data in dataset:
+        model.eval()
         preds = model(data.x, data.edge_index, data.edge_attr)
         preds = refine_preds(data, preds)
         excess_diff, speedup = compute_graph_metrics(data, preds, raw_dir)
@@ -30,7 +31,7 @@ def compute_dataset_metrics(dataset, model, raw_dir):
         excess_diffs.append(excess_diff)
 
     mean_excess = np.mean(np.array(excess_diffs))
-    mean_speedup = np.mean(np.array(speedup))
+    mean_speedup = np.mean(np.array(speedups))
 
     print(
         f"Metrics: \n     Average speedup with learned duals: {mean_speedup}\n     Mean excess difference: "
@@ -59,9 +60,9 @@ def compute_graph_metrics(graph, preds, raw_dir):
     speedup = (orig_nb_iters - trained_nb_iters) / orig_nb_iters
     # Multiplying by 100 to get speedup in percentage
     speedup *= 100
-    excess_diff = orig_excess - trained_excess
-    print(f"orig iters: {orig_nb_iters}, trained iters: {trained_nb_iters}, speedup: {speedup}")
+    print(f"orig iters: {orig_nb_iters}, trained iters: {trained_nb_iters}")
     print(f"orig excess: {orig_excess}, trained_excess: {trained_excess}")
+    excess_diff = orig_excess - trained_excess
     return excess_diff, speedup
 
 
@@ -78,8 +79,11 @@ def refine_preds(data, preds):
     """
     reduced_cost = -preds[data.edge_index[1]].squeeze() + preds[data.edge_index[0]].squeeze() + data.edge_attr[:, 1]
     reduced_cost = reduced_cost.detach().numpy().flatten()
-    threshold = np.quantile(reduced_cost[reduced_cost < 0], 0.05)
+    threshold = np.quantile(reduced_cost[reduced_cost < 0], 0.1)
     neg_edges = list(zip(*data.edge_index[:, reduced_cost < threshold].numpy()))
+    if len(neg_edges) == 0:
+        # No way to optimize the predictions if there are no negative predicted edges
+        return preds.squeeze().detach().numpy().tolist()
     pos_edges = list(zip(*data.edge_index[:, reduced_cost > threshold].numpy()))
     edges = list(zip(*data.edge_index.numpy()))
     costs = dict(zip(edges, list(data.edge_attr[:, 1].numpy())))
@@ -101,5 +105,4 @@ def refine_preds(data, preds):
     )
 
     prob.solve()
-
     return y.value

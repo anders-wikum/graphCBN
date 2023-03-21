@@ -6,7 +6,7 @@ import shutil
 
 def generate_min_cost_flow_graphs(
         num = 500,
-        n = 100,
+        n = 50,
         s = 2,
         t = 2,
         supply = 250,
