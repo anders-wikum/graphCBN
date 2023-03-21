@@ -154,7 +154,7 @@ def min_cost_flow(nodes, edges, flow_alg, debug):
         opt = nx.min_cost_flow_cost(G)
     if flow_alg == 'cbn':
         N = build_network(nodes, edges)
-        converged, c_p, _, p, opt = successive_shortest_paths(N, iter_limit = 100)
+        converged, c_p, _, p, opt = successive_shortest_paths(N, iter_limit = 150)
     return converged, c_p, opt, p
 
 

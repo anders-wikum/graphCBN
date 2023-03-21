@@ -292,8 +292,7 @@ def saturate_neg_cost_admissible(
         for e, u in u_f.items()
         if c_p[e] < 0 and u > 0
     ]
-    print(f"Number of negative cost admissible edges: {len(neg_cost_admissible)}")
-    # print({e: c_p[e] for e in neg_cost_admissible})
+    # print(f"Number of negative cost admissible edges: {len(neg_cost_admissible)}")
 
     saturate_edges(N, f, u_f, neg_cost_admissible)
 
@@ -418,7 +417,9 @@ def successive_shortest_paths(
     # Compute reduced costs w.r.t potentials p
     c_p = reduced_cost(N, u_f, p)
     S_f, T_f, e_f = excess_nodes(N, f)
-    print(np.sum(np.abs(np.array(list(e_f.values())))))
+
+    if kwargs.get('metrics', False):
+        init_excess = np.sum(np.abs(np.array(list(e_f.values()))))
 
     while len(S_f) > 0:
         # Admissible edges
@@ -430,7 +431,6 @@ def successive_shortest_paths(
         S_f, T_f, e_f = excess_nodes(N, f)
 
         iters += 1
-        print(f"Iteration: {iters}")
         if iters == iter_limit:
             if 'iter_limit' in kwargs:
                 return False, c_p, f, p, np.array([-1])
@@ -438,6 +438,9 @@ def successive_shortest_paths(
                 return f, p, np.array([-1])
 
     assert len({e: c for (e, c) in c_p.items() if u_f[e] > 0 and c < 0}) == 0
+
+    if kwargs.get('metrics', False):
+        return init_excess, iters, primal_value(N, f)
 
     if 'iter_limit' in kwargs:
         c_p = reduced_cost_post_processing(N, u_f, p)
