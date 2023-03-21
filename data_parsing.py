@@ -9,8 +9,7 @@ import numpy as np
 
 def parse(filename):
     """
-    Parses a network file following the DIMACS problem specification
-    structure and transforms it into a Network object
+    Parses a network file following in DIMACS format
 
     Some elements of the specification:
     - Lines starting in c are comments
@@ -23,7 +22,8 @@ def parse(filename):
         filename: name of the file containing the network data
 
     Returns:
-        The corresponding Network object
+        A dictionary keyed on nodes with supply, and a dictionary
+        keyed on edges with capacity and cost.
     """
     # Lines we can ignore
     ignore_list = ['c', 'p']
@@ -59,7 +59,7 @@ def parse(filename):
                 else:
                     edges[(node1, node2)] = (capacity, cost)
     file.close()
-    nodes = OrderedDict(sorted(nodes.items(), key=lambda t: t[0]))
+    nodes = OrderedDict(sorted(nodes.items(), key = lambda t: t[0]))
 
     supply = 0
     for node in nodes:
@@ -74,7 +74,7 @@ def parse(filename):
 
     nodes[-1] = supply
     nodes[-2] = -supply
-    
+
     return nodes, edges
 
 
@@ -89,7 +89,18 @@ def build_network(nodes, edges):
     )
 
 
-def build_networkx(nodes, edges):
+def build_networkx(nodes: dict, edges: dict) -> nx.digraph:
+    """
+    Converts (nodes, edges) output from parse into a directed
+    NetworkX graph.
+
+    Args:
+        nodes: dictionary keyed on nodes with supply
+        edges: dictionary keyed on edges with capacity and cost
+
+    Returns:
+        Directed NetworkX graph representing the flow network.
+    """
     G = nx.DiGraph()
     for (n, s) in nodes.items():
         G.add_node(n, demand = -s)
@@ -99,43 +110,78 @@ def build_networkx(nodes, edges):
 
     return G
 
-def _build_pyg(nodes, edges, opt, p):
 
-    if (len(edges.keys()) <= 1e6):
+def _build_pyg(
+        nodes: dict,
+        edges: dict,
+        opt: float,
+        p: dict,
+        converged: bool,
+        c_p: dict
+    ) -> dict:
+    """
+    Converts (nodes, edges) output from parse into the tensors needed to
+    initialize a PyG data object.
+
+    Args:
+        nodes: dictionary keyed on nodes with supply
+        edges: dictionary keyed on edges with capacity and cost
+        opt: the optimal min cost flow value in the network
+        p: a set of optimal potentials in the network
+        converged: boolean that is True if the min cost flow algorithm converged
+            in the desired number of iterations and False otherwise. If False,
+            the input is excluded from final dataset.
+
+    Returns:
+        Dictionary containing objects needed to initialize PyG dataset:
+            1) Edge index tensor
+            2) Edge attribute tensor
+            3) Node feature tensor
+            4) Graph label tensor
+    """
+    if len(edges.keys()) <= 1e6 and converged:
         index = {node: index for node, index in zip(nodes, range(len(nodes)))}
-        x = torch.tensor([supply for supply in nodes.values()]).reshape((-1, 1))
+        x = torch.tensor([supply for supply in nodes.values()]).reshape((-1, 1)).type(torch.FloatTensor)
         edge_index = []
         edge_attr = []
+        reduced_cost = []
         y = np.array([[opt for _ in range(len(p))], list(p.values())])
         for e, attr in edges.items():
             edge_index.append([index[e[0]], index[e[1]]])
             edge_attr.append(list(attr))
+            reduced_cost.append(c_p[e])
         edge_index = torch.tensor(edge_index).T
-        edge_attr = torch.tensor(edge_attr)
+        edge_attr = torch.tensor(edge_attr).type(torch.FloatTensor)
+        reduced_cost = torch.tensor(reduced_cost)
         y = torch.tensor(y).T
-        return {"converged": True, "x": x, "edge_index": edge_index, "edge_attr": edge_attr, "y": y}
-
-    return {"converged": False}
-
-def build_pyg(nodes, edges, opt):
-
-    if (len(edges.keys()) <= 1e6) and (opt is not None):
-        index = {node: index for node, index in zip(nodes, range(len(nodes)))}
-        x = torch.tensor([supply for supply in nodes.values()]).reshape((-1, 1))
-        edge_index = []
-        edge_attr = []
-        for e, attr in edges.items():
-            edge_index.append([index[e[0]], index[e[1]]])
-            edge_attr.append(list(attr))
-        edge_index = torch.tensor(edge_index).T
-        edge_attr = torch.tensor(edge_attr)
-        y = torch.tensor(opt).reshape(1, 1)
-        return {"converged": True, "x": x, "edge_index": edge_index, "edge_attr": edge_attr, "y": y}
+        return {"converged": converged, "x": x, "edge_index": edge_index, "edge_attr": edge_attr, "y": y,
+                "reduced_cost": reduced_cost}
 
     return {"converged": False}
 
 
-def min_cost_flow(nodes, edges, flow_alg, debug):
+def min_cost_flow(
+        nodes: dict,
+        edges: dict,
+        flow_alg: str,
+        debug: bool
+    ) -> tuple:
+    """
+    Given the network defined by [(nodes, edges)], compute a minimum cost
+    flow using [flow_alg]. If [debug] is True, print a visualization of the
+    network.
+
+    Args:
+        nodes: dictionary keyed on nodes with supply
+        edges: dictionary keyed on edges with capacity and cost
+        flow_alg: one of 'nx' or 'cbn'. The former is networkx's proprietary
+            min-cost flow algorithm, the latter calls solvers in
+            min_cost_flow.py.
+
+    Returns:
+        Whether or not the min-cost flow algorithm converged on the instance. If
+        converged, the optimal reduced costs, value, and potentials.
+    """
     if flow_alg == 'nx':
         G = build_networkx(nodes, edges)
         if debug:
@@ -146,23 +192,32 @@ def min_cost_flow(nodes, edges, flow_alg, debug):
         opt = nx.min_cost_flow_cost(G)
     if flow_alg == 'cbn':
         N = build_network(nodes, edges)
-        _, _, p, opt = successive_shortest_paths(N, iter_limit = 100)
-    return opt, p
+        converged, c_p, _, p, opt = successive_shortest_paths(N, iter_limit=150)
+    return converged, c_p, opt, p
 
 
 def process_file(filename, flow_alg, debug: Optional[bool] = False):
+    """
+    Given a flow network in DIMACS format in [filename], convert into
+    PyG-compatible input tensors, and label the instance according to
+    min-cost flow information found by running [flow_alg] on the instance.
+
+    Args:
+        filename: name of the file containing the network data
+        flow_alg: one of 'nx' or 'cbn'. The former is networkx's proprietary
+            min-cost flow algorithm, the latter calls solvers in
+            min_cost_flow.py.
+
+    Returns:
+        Dictionary containing objects needed to initialize PyG dataset:
+            1) Edge index tensor
+            2) Edge attribute tensor
+            3) Node feature tensor
+            4) Graph label tensor
+    """
     nodes, edges = parse(filename)
     if len(edges.keys()) <= 1e6:
-        opt, p = min_cost_flow(nodes, edges, flow_alg, debug)
-        return _build_pyg(nodes, edges, opt, p)
+        converged, c_p, opt, p = min_cost_flow(nodes, edges, flow_alg, debug)
+        return _build_pyg(nodes, edges, opt, p, converged, c_p)
     else:
         return {"converged": False}
-
-# def pyg_to_networkx(edge_index, edge_attr):
-#     G = nx.DiGraph()
-#     nodes = list(set(edge_index[:, 0]).union(set(edge_index[:, 1])))
-#     for node in nodes:
-#         G.add_node(node)
-
-#     for i in range(edge_index.size(0)):
-#       G.add_edge(edge_index[i, 0], edge_index[i, 1], weight=edge_attr[i, 0], capacity=[i, 1])

@@ -149,6 +149,40 @@ def reduced_cost(
     return reduced_costs
 
 
+def reduced_cost_post_processing(
+        N: Network,
+        u_f: Dict[Tuple[object, object], int],
+        p: Dict[object, int]
+):
+    """
+    Computes reduced costs of the edges in the residual graph [u_f] with respect to edge
+    costs [N.c] and node potentials [p].
+
+    Args:
+        N: Network representing the problem input
+        u_f: Dictionary encoding the residual graph w.r.t the current flow
+        p: Current node potentials
+
+    Returns:
+        A dictionary which gives the reduced cost for each edge (u, v) according to
+        c_p[(u, v)] = c[(u, v)] + p[u] - p[v].
+    """
+    reduced_costs = {}
+    for e in u_f.keys():
+        (u, v, _) = e
+        if e in N.c:
+            rc = N.c[e] + p[u] - p[v]
+        else:
+            rc = -N.c[rev(e)] + p[u] - p[v]
+
+        if round(rc, 4) == 0:
+            reduced_costs[(u, v)] = 0
+        else:
+            reduced_costs[(u, v)] = rc
+
+    return reduced_costs
+
+
 def excess_nodes(
         N: Network,
         f: Dict[Tuple[object, object], int],
@@ -258,8 +292,7 @@ def saturate_neg_cost_admissible(
         for e, u in u_f.items()
         if c_p[e] < 0 and u > 0
     ]
-    print(f"Number of negative cost admissible edges: {len(neg_cost_admissible)}")
-    #print({e: c_p[e] for e in neg_cost_admissible})
+    # print(f"Number of negative cost admissible edges: {len(neg_cost_admissible)}")
 
     saturate_edges(N, f, u_f, neg_cost_admissible)
 
@@ -337,7 +370,7 @@ def compute_feasible_flow(
         # Admissible edges
         adj = [e for (e, u) in u_f_prime.items() if u > 0]
         P = BFS(S_f, T_f, adj)
-        #print(P)
+        # print(P)
         if P is None:
             break
         augment_flow_along_path(P, f, u_f_prime, e_f)
@@ -384,7 +417,9 @@ def successive_shortest_paths(
     # Compute reduced costs w.r.t potentials p
     c_p = reduced_cost(N, u_f, p)
     S_f, T_f, e_f = excess_nodes(N, f)
-    print(np.sum(np.abs(np.array(list(e_f.values())))))
+
+    if kwargs.get('metrics', False):
+        init_excess = np.sum(np.abs(np.array(list(e_f.values()))))
 
     while len(S_f) > 0:
         # Admissible edges
@@ -396,17 +431,19 @@ def successive_shortest_paths(
         S_f, T_f, e_f = excess_nodes(N, f)
 
         iters += 1
-        print(f"Iteration: {iters}")
         if iters == iter_limit:
             if 'iter_limit' in kwargs:
-                return False, f, p, np.array([-1])
+                return False, c_p, f, p, np.array([-1])
             else:
                 return f, p, np.array([-1])
-        
 
     assert len({e: c for (e, c) in c_p.items() if u_f[e] > 0 and c < 0}) == 0
 
+    if kwargs.get('metrics', False):
+        return init_excess, iters, primal_value(N, f)
+
     if 'iter_limit' in kwargs:
-        return True, f, p, primal_value(N, f)
+        c_p = reduced_cost_post_processing(N, u_f, p)
+        return True, c_p, f, p, primal_value(N, f)
     else:
         return f, p, primal_value(N, f)
