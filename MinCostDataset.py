@@ -42,7 +42,7 @@ class MinCostDataset(Dataset):
 
         # Start by getting the last file id to avoid overwriting (since we expect
         # filenames to be formatted as "data_{id}.pt")
-        # idx = 0
+        idx = 0
         # found_file = False
         # for file in os.listdir(self.processed_dir):
         #     prefix_string = "data_"
@@ -75,7 +75,7 @@ class MinCostDataset(Dataset):
                             filename = file)
 
                 torch.save(data, osp.join(self.processed_dir, f'data_{idx}.pt'))
-                #idx += 1
+                idx += 1
 
     def len(self):
         return len(self.processed_file_names)
