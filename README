@@ -1,3 +1,6 @@
+# GraphCBN: Graph ML for the Min-Cost Flow Problem
+
+## Overview:
 This repository contains all functionality necessary to perform graph ML 
 on Min-Cost Flow input networks, including
   1. Network generation in `graph_generator.py`
