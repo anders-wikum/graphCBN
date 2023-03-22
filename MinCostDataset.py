@@ -3,7 +3,7 @@ import os.path as osp
 
 import torch
 from torch_geometric.data import Data, Dataset
-
+import re
 from data_parsing import process_file
 
 
@@ -42,21 +42,22 @@ class MinCostDataset(Dataset):
         # Start by getting the last file id to avoid overwriting (since we expect
         # filenames to be formatted as "data_{id}.pt")
         idx = 0
-        # found_file = False
-        # for file in os.listdir(self.processed_dir):
-        #     prefix_string = "data_"
-        #     if file.startswith(prefix_string):
-        #         found_file = True
-        #         file_id = int(re.findall(r'\d+', file)[0])
-        #         idx = max(idx, file_id)
-        # if found_file:
-        #     idx += 1
+        found_file = False
+        for file in os.listdir(self.processed_dir):
+            prefix_string = "data_"
+            if file.startswith(prefix_string):
+                found_file = True
+                file_id = int(re.findall(r'\d+', file)[0])
+                idx = max(idx, file_id)
+        if found_file:
+            idx += 1
 
         path = self.raw_dir
         for file in os.listdir(path):
             file_path = os.path.join(path, file)
-            # if os.path.isdir(file_path):
-            #     continue
+            if os.path.isdir(file_path):
+                continue
+
             # Read data from `raw_path`.
             output = process_file(file_path, 'cbn')
             if output["converged"]:
