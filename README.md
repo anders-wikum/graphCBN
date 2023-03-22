@@ -1,5 +1,5 @@
 # GraphCBN: Graph ML for the Min-Cost Flow Problem
-![plot](./resources/flow_network.png)
+![Alt text](./resources/flow_network.PNG)
 ## Overview:
 This repository contains all functionality necessary to perform graph ML 
 on Min-Cost Flow input networks, including
