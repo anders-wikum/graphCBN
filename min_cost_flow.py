@@ -423,6 +423,8 @@ def successive_shortest_paths(
 
     while len(S_f) > 0:
         # Admissible edges
+        if kwargs.get('verbose', False):
+            print(f)
         adj = {e: c for (e, c) in c_p.items() if u_f[e] > 0}
         D, P = dijkstra(S_f, T_f, adj)
         update_potentials(p, D, P)

@@ -111,7 +111,7 @@ def build_networkx(nodes: dict, edges: dict) -> nx.digraph:
     return G
 
 
-def _build_pyg(
+def build_pyg(
         nodes: dict,
         edges: dict,
         opt: float,
@@ -218,6 +218,6 @@ def process_file(filename, flow_alg, debug: Optional[bool] = False):
     nodes, edges = parse(filename)
     if len(edges.keys()) <= 1e6:
         converged, c_p, opt, p = min_cost_flow(nodes, edges, flow_alg, debug)
-        return _build_pyg(nodes, edges, opt, p, converged, c_p)
+        return build_pyg(nodes, edges, opt, p, converged, c_p)
     else:
         return {"converged": False}
