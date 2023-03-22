@@ -55,8 +55,8 @@ class MinCostDataset(Dataset):
         path = self.raw_dir
         for file in os.listdir(path):
             file_path = os.path.join(path, file)
-            if os.path.isdir(file_path):
-                continue
+            # if os.path.isdir(file_path):
+            #     continue
             # Read data from `raw_path`.
             output = process_file(file_path, 'cbn')
             if output["converged"]:
