@@ -1,7 +1,9 @@
 # GraphCBN: Graph ML for the Min-Cost Flow Problem
 ![Alt text](./resources/flow_network.PNG)
 ## Overview:
-This repository contains all functionality necessary to perform graph ML 
+This repository is the basis for a Medium post of the same name that explores
+using graph ML for reducing solve time of new instances of the Min-Cost
+Flow problem. It contains all functionality necessary to perform graph ML 
 on Min-Cost Flow input networks, including
   1. Network generation in `graph_generator.py`
   2. Processing input networks in DIMACS input format into formats expected by
