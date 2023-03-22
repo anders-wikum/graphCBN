@@ -1,0 +1,10 @@
+cvxpy
+matplotlib
+numpy
+networkx
+pynetgen
+pytest
+torch==1.13.1+cu117
+torch-scatter -f https://pytorch-geometric.com/whl/torch-1.13.1+cu117.html
+torch-sparse -f https://pytorch-geometric.com/whl/torch-1.13.1+cu117.html
+torch-geometric
